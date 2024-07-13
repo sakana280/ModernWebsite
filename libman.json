@@ -1,0 +1,55 @@
+{
+  "version": "1.0",
+  "defaultProvider": "unpkg",
+  "libraries": [
+    {
+      "provider": "unpkg",
+      "library": "localforage@1.10.0",
+      "destination": "wwwroot/lib/localforage/",
+      "files": [
+        "dist/localforage.min.js"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "leaflet@1.9.4",
+      "destination": "wwwroot/lib/leaflet/",
+      "files": [
+        "dist/images/layers-2x.png",
+        "dist/images/layers.png",
+        "dist/images/marker-icon-2x.png",
+        "dist/images/marker-icon.png",
+        "dist/images/marker-shadow.png",
+        "dist/leaflet.js",
+        "dist/leaflet.css"
+      ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "leaflet-color-markers@0.1.0",
+      "destination": "wwwroot/",
+      "files": [
+        "img/marker-icon-2x-black.png",
+        "img/marker-icon-2x-blue.png",
+        "img/marker-icon-2x-gold.png",
+        "img/marker-icon-2x-green.png",
+        "img/marker-icon-2x-grey.png",
+        "img/marker-icon-2x-orange.png",
+        "img/marker-icon-2x-red.png",
+        "img/marker-icon-2x-violet.png",
+        "img/marker-icon-2x-yellow.png",
+        "img/marker-icon-black.png",
+        "img/marker-icon-blue.png",
+        "img/marker-icon-gold.png",
+        "img/marker-icon-green.png",
+        "img/marker-icon-grey.png",
+        "img/marker-icon-orange.png",
+        "img/marker-icon-red.png",
+        "img/marker-icon-violet.png",
+        "img/marker-icon-yellow.png",
+        "img/marker-shadow.png",
+        "js/leaflet-color-markers.js"
+      ]
+    }
+  ]
+}
