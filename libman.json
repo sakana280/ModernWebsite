@@ -50,6 +50,15 @@
         "img/marker-shadow.png",
         "js/leaflet-color-markers.js"
       ]
+    },
+    {
+      "provider": "unpkg",
+      "library": "workbox-window@7.1.0",
+      "destination": "wwwroot/lib/workbox-window/",
+      "files": [
+        "build/workbox-window.prod.mjs",
+        "build/workbox-window.prod.es5.mjs"
+      ]
     }
   ]
 }

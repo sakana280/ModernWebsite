@@ -11,23 +11,29 @@
     <title>Offline Web App Demo</title>
 
     <!-- (A) REGISTER SERVICE WORKER (can/should defer this to after page load) -->
-    <script>
-        navigator.serviceWorker.register("./service-worker.js", { type: 'module' })
+@*     <script>
+        navigator.serviceWorker.register("./service-worker.js", { /*type: 'module'*/ }) // import not working in module mode
             .then(reg => console.log(reg))     // ok
             .catch(err => console.error(err)); // error
+    </script> *@
+
+    <script type="module">
+        import { Workbox } from './lib/workbox-window/build/workbox-window.prod.mjs';
+        window.wb = new Workbox('/service-worker.js');
+        wb.register(); // defers registration to after page load
     </script>
 
-    <!-- Use leaflet for now since it uses no POST requests, unlike Google Maps, which cannot be cached -->
+    <!-- Use leaflet for now since it uses only GET requestss. Google Maps uses a POST request, which cannot be cached. -->
     <link rel="stylesheet" href="./lib/leaflet/dist/leaflet.css" />
     <script src="./lib/leaflet/dist/leaflet.js"></script>
     <script src="./js/leaflet-color-markers.js"></script>
 
     <!-- Use localForage as an improved localStorage that stores any object and prefers IndexedDB -->
-    <script src="./lib/localforage/dist/localforage.min.js"></script>
+    @* <script src="./lib/localforage/dist/localforage.min.js"></script> *@
 
     <!-- <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script> -->
     <link rel="stylesheet" type="text/css" href="./css/site.css" />
-    <script type="module" src="./js/site.js"></script>
+    <script src="./js/site.js" type="module"></script>
 
     <link rel="manifest" href="manifest.json">
 </head>

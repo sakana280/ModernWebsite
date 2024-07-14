@@ -14,28 +14,28 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 
 // Generate client id.
 // Authentication/username would normally replace this.
-const clientid = await localforage.getItem('clientid') || generateAndStoreNewClientId();
+const clientid = '1';//todo  await localforage.getItem('clientid') || generateAndStoreNewClientId();
 console.log('clientid', clientid);
 
 // On page load, immediately load from storage, and start sync from server.
-loadFromStorage();
+//loadFromStorage();
 //todo start sync
+await loadFromSW();
 
 
 
-async function generateAndStoreNewClientId() {
-    const id = crypto.randomUUID();
-    await localforage.setItem('clientid', id);
-    return id;
-}
+//async function generateAndStoreNewClientId() {
+//    const id = crypto.randomUUID();
+//    await localforage.setItem('clientid', id);
+//    return id;
+//}
 
 // https://stackoverflow.com/questions/18575722/leaflet-js-set-marker-on-click-update-position-on-drag/18601489#18601489
 map.on('click', async function (e) {
     const id = crypto.randomUUID();
     const pin = { id: id, owner: clientid, latlng: e.latlng, show: true, sync: true };
-    addPin(pin);
-    await localforage.setItem('pin-' + id, pin);
-    //todo sync
+    addPin(pin); //todo remove this after sw echos back updates
+    window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
 });
 
 function addPin(pin) {
@@ -49,27 +49,23 @@ function addPin(pin) {
     marker.on('dragend', async function (event) { // clicked and dragged
         var marker = event.target;
         var position = marker.getLatLng();
-        marker.pin.latlng = e.latlng;
-        await localforage.setItem('pin-' + id, pin);
-        //todo sync
+        marker.pin.latlng = position;
+        window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
         console.log('move', id, 'to', position);
     });
 
-    marker.on('click', async function (event) { // clicked without dragging
+    marker.on('click', async function (event) { // clicked without dragging -> delete
         var marker = event.target;
         marker.pin.show = false;
-        await localforage.setItem('pin-' + id, pin);
-        //todo sync
-        map.removeLayer(marker);
+        window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
+        map.removeLayer(marker); //todo remove this after sw echos back updates
         console.log('delete', id);
     });
 
     map.addLayer(marker);
 }
 
-async function loadFromStorage() {
-    await localforage.iterate(function (value, key, iterationNumber) {
-        if (key.startsWith('pin') && value.show)
-            addPin(value);
-    });
+async function loadFromSW() {
+    const pins = await window.wb.messageSW({ type: 'GET_PINS' });
+    pins.map(addPin);
 }
