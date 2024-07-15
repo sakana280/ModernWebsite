@@ -3,15 +3,17 @@
 // as per https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register#examples
 
 const ENABLE_CACHE = false;
+const DATA_PUSH_EVENT_TAG = 'data-push';
 
 //import localforage from './lib/localforage/dist/localforage.min.js'; // uses IndexedDB which works inside service workers
 importScripts('./lib/localforage/dist/localforage.min.js'); // uses IndexedDB which works inside service workers
 
 // (A) CREATE/INSTALL CACHE
 self.addEventListener("install", evt => {
+    console.log("Installed service worker");
     self.skipWaiting(); // to replace old workers immediately
     evt.waitUntil(addStaticResourcesToCache([ // these files are cached by the browser's SW mechanism, separate and in addition to our custom NetworkRequests cache
-        "/",
+    //    "/",
     //    "/js/site.js",
     //    "/css/site.css" // add more files to cache here
     ]));
@@ -39,8 +41,6 @@ async function addStaticResourcesToCache(resources) {
 }
 
 async function fetchUseCache(request) {
-    //if (request.url === 'https://maps.googleapis.com/$rpc/google.internal.maps.mapsjs.v1.MapsJsInternalService/GetViewportInfo')
-    //    return new Response('', { status: 200 });
     const match = await caches.match(request);
     const response = match || await fetchAndCache(request);
     return response;
@@ -59,14 +59,54 @@ async function fetchAndCache(request) {
 async function loadFromStorage() {
     var pins = [];
     await localforage.iterate(function (value, key, iterationNumber) {
-        if (key.startsWith('pin') && value.show)
+        if (key.startsWith('pin') && value.show) {
             pins.push(value);
+        }
     });
     return pins;
 }
 
 async function updatePin(pin) {
+    pin.sync = true;
+    pin.updated = new Date().toISOString();
     await localforage.setItem('pin-' + pin.id, pin);
     //todo notify all clients
-    //todo queue for sync
+    await scheduleDataPush();
+}
+
+async function scheduleDataPush() {
+    const tags = await self.registration.sync.getTags();
+    if (!tags.includes(DATA_PUSH_EVENT_TAG)) {
+        await self.registration.sync.register(DATA_PUSH_EVENT_TAG); // need to handle NotAllowedError if user has disabled background sync?
+    }
+}
+
+self.addEventListener('sync', event => {
+    if (event.tag === DATA_PUSH_EVENT_TAG) {
+        event.waitUntil(trySendPendingData());
+        // what if even.lastChance===true?
+    }
+});
+
+async function trySendPendingData() {
+    // Get pins that have not been sync'ed to the backend yet.
+    var pins = [];
+    await localforage.iterate(function (value, key, iterationNumber) {
+        if (key.startsWith('pin') && value.sync) {
+            pins.push({ key:key, value: value });
+        }
+    });
+
+    // Send each to the backend, and only mark as sent after successful send.
+    console.log('Sending pins', pins.length);
+    pins.forEach(async item => {
+        console.log('Sending pin', item.value.id);
+        await fetch('api/Sync', {
+            method: 'post',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.value)
+        });
+        item.value.sync = false;
+        await localforage.setItem(item.key, item.value);
+    });
 }

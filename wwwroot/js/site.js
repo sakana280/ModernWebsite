@@ -1,6 +1,6 @@
 ﻿// Storage schemas:
 // clientid: this client id, a guid generated if no clientid yet
-// pin-{GUID}: a pin object: {id:GUID, owner:GUID, latlng:latlng, show:true|false, sync:true|false}
+// pin-{GUID}: a pin object: {id:GUID, owner:GUID, latlng:latlng, updated:<ISO UTC date>, show:true|false, sync:true|false}
 // After a pin changes (move/delete) sync=true indicating it needs to be sync'ed to the server
 // After a changed pin is sync'ed, set sync=false
 // After a pin is deleted, show=false
@@ -13,27 +13,25 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Generate client id.
-// Authentication/username would normally replace this.
-const clientid = '1';//todo  await localforage.getItem('clientid') || generateAndStoreNewClientId();
+// TODO authentication/username should replace this.
+const clientid = await localforage.getItem('clientid') || await generateAndStoreNewClientId();
 console.log('clientid', clientid);
 
 // On page load, immediately load from storage, and start sync from server.
-//loadFromStorage();
-//todo start sync
 await loadFromSW();
 
 
 
-//async function generateAndStoreNewClientId() {
-//    const id = crypto.randomUUID();
-//    await localforage.setItem('clientid', id);
-//    return id;
-//}
+async function generateAndStoreNewClientId() {
+    const id = crypto.randomUUID();
+    await localforage.setItem('clientid', id);
+    return id;
+}
 
 // https://stackoverflow.com/questions/18575722/leaflet-js-set-marker-on-click-update-position-on-drag/18601489#18601489
 map.on('click', async function (e) {
     const id = crypto.randomUUID();
-    const pin = { id: id, owner: clientid, latlng: e.latlng, show: true, sync: true };
+    const pin = { id: id, owner: clientid, latlng: e.latlng, show: true };
     addPin(pin); //todo remove this after sw echos back updates
     window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
 });

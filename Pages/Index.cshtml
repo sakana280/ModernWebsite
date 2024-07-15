@@ -10,13 +10,6 @@
 <head>
     <title>Offline Web App Demo</title>
 
-    <!-- (A) REGISTER SERVICE WORKER (can/should defer this to after page load) -->
-@*     <script>
-        navigator.serviceWorker.register("./service-worker.js", { /*type: 'module'*/ }) // import not working in module mode
-            .then(reg => console.log(reg))     // ok
-            .catch(err => console.error(err)); // error
-    </script> *@
-
     <script type="module">
         import { Workbox } from './lib/workbox-window/build/workbox-window.prod.mjs';
         window.wb = new Workbox('/service-worker.js');
@@ -29,7 +22,7 @@
     <script src="./js/leaflet-color-markers.js"></script>
 
     <!-- Use localForage as an improved localStorage that stores any object and prefers IndexedDB -->
-    @* <script src="./lib/localforage/dist/localforage.min.js"></script> *@
+    <script src="./lib/localforage/dist/localforage.min.js"></script>
 
     <!-- <script src="https://polyfill.io/v3/polyfill.min.js?features=default"></script> -->
     <link rel="stylesheet" type="text/css" href="./css/site.css" />
@@ -38,7 +31,6 @@
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <!-- (B) CONTENT AS USUAL -->
     <h1>Offline map example</h1>
     <p>Click a blank area to place a pin. Drag a pin to move it. Click a pin to delete it.</p>
     <div id="map"></div>
