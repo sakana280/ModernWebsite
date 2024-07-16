@@ -32,33 +32,36 @@ async function generateAndStoreNewClientId() {
 map.on('click', async function (e) {
     const id = crypto.randomUUID();
     const pin = { id: id, owner: clientid, latlng: e.latlng, show: true };
-    addPin(pin); //todo remove this after sw echos back updates
     window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
+    // Add the pin to the map when the service worker echoes back the new pin.
 });
 
 function addPin(pin) {
     const id = pin.id;
     const position = pin.latlng;
     console.log('new', id, 'at', position);
-    const icon = pin.owner===clientid ? redIcon : blueIcon;
-    const marker = new L.marker(position, { icon: icon, draggable: 'true' });
+    const isMine = pin.owner === clientid;
+    const icon = isMine ? redIcon : blueIcon;
+    const marker = new L.marker(position, { icon: icon, draggable: isMine, interactive: isMine });
     marker.pin = pin;
 
-    marker.on('dragend', async function (event) { // clicked and dragged
-        var marker = event.target;
-        var position = marker.getLatLng();
-        marker.pin.latlng = position;
-        window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
-        console.log('move', id, 'to', position);
-    });
+    // Only allow edits to our own pins.
+    if (isMine) {
+        marker.on('dragend', async function (event) { // clicked and dragged
+            var marker = event.target;
+            var position = marker.getLatLng();
+            marker.pin.latlng = position;
+            window.wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
+            console.log('move', id, 'to', position);
+        });
 
-    marker.on('click', async function (event) { // clicked without dragging -> delete
-        var marker = event.target;
-        marker.pin.show = false;
-        window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
-        map.removeLayer(marker); //todo remove this after sw echos back updates
-        console.log('delete', id);
-    });
+        marker.on('click', async function (event) { // clicked without dragging -> delete
+            var marker = event.target;
+            marker.pin.show = false;
+            window.wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
+            console.log('delete', id);
+        });
+    }
 
     map.addLayer(marker);
 }
@@ -66,4 +69,31 @@ function addPin(pin) {
 async function loadFromSW() {
     const pins = await window.wb.messageSW({ type: 'GET_PINS' });
     pins.map(addPin);
+}
+
+navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data.type == 'UPDATE_PIN') {
+        const pin = event.data.payload;
+        const layer = getLayerForPinId(pin.id);
+        if (!layer) {
+            addPin(pin);
+        } else if (pin.show) {
+            layer.pin = pin; // might have updated our own pin from another tab or device
+            layer.setLatLng(pin.latlng);
+        } else {
+            map.removeLayer(layer);
+        }
+    } else {
+        console.error('Unexpected message', event);
+    }
+});
+
+function getLayerForPinId(id) {
+    const found = [];
+    map.eachLayer(layer => {
+        if (layer.pin && layer.pin.id === id) {
+            found.push(layer);
+        }
+    });
+    return found.length > 0 ? found[0] : null;
 }
