@@ -10,10 +10,10 @@ const DATA_PULL_EVENT_TAG = 'data-pull';
 importScripts('./lib/localforage/dist/localforage.min.js'); // uses IndexedDB which works inside service workers
 
 // (A) CREATE/INSTALL CACHE
-self.addEventListener("install", evt => {
+self.addEventListener("install", event => {
     console.log("Installed service worker");
     self.skipWaiting(); // to replace old workers immediately
-    evt.waitUntil(addStaticResourcesToCache([ // these files are cached by the browser's SW mechanism, separate and in addition to our custom NetworkRequests cache
+    event.waitUntil(addStaticResourcesToCache([ // these files are cached by the browser's SW mechanism, separate and in addition to our custom NetworkRequests cache
     //    "/",
     //    "/js/site.js",
     //    "/css/site.css" // add more files to cache here
@@ -22,21 +22,24 @@ self.addEventListener("install", evt => {
 
 // (B) CLAIM CONTROL INSTANTLY
 // Otherwise this worker will not control existing opened pages.
-self.addEventListener("activate", evt => {
+self.addEventListener("activate", event => {
     self.clients.claim();
-    evt.waitUntil(scheduleSyncEvent(DATA_PULL_EVENT_TAG));
+    event.waitUntil(scheduleSyncEvent(DATA_PULL_EVENT_TAG));
 });
 
 // (C) LOAD FROM CACHE FIRST, FALLBACK TO NETWORK IF NOT FOUND
-self.addEventListener("fetch", evt => evt.respondWith(fetchUseCache(evt.request)));
+self.addEventListener("fetch", event => event.respondWith(fetchUseCache(event.request)));
 
-self.addEventListener('message', async (event) => {
+self.addEventListener('message', event => {
     if (event.data.type === 'GET_PINS') {
-        event.ports[0].postMessage(await loadFromStorage());
-        await scheduleSyncEvent(DATA_PULL_EVENT_TAG); // force reload from server on page load TODO use something smarter and less chatty like signalr
+        //event.waitUntil(getPinsOnPageLoad(event.ports[0].postMessage)); // this errors with Illegal Invocation
+        event.waitUntil(loadFromStorage().then(pins => {
+            event.ports[0].postMessage(pins);
+            return scheduleSyncEvent(DATA_PULL_EVENT_TAG); // force reload from server on page load TODO use something smarter and less chatty like signalr
+        }));
     }
     if (event.data.type === 'UPDATE_PIN') {
-        await updatePin(event.data.payload);
+        event.waitUntil(updatePin(event.data.payload));
     }
 });
 
@@ -61,6 +64,12 @@ async function fetchAndCache(request) {
     }
     return response;
 }
+
+//async function getPinsOnPageLoad(postMessage) {
+//    const pins = await loadFromStorage();
+//    postMessage(pins);
+//    await scheduleSyncEvent(DATA_PULL_EVENT_TAG); // force reload from server on page load TODO use something smarter and less chatty like signalr
+//}
 
 async function loadFromStorage() {
     var pins = [];
@@ -114,6 +123,7 @@ async function loadServerData() {
     for (const pin of pins) {
         await mergePin(pin);
     }
+    console.log('Loaded server data');
 }
 async function mergePin(remotePin) {
     const cachedPin = await localforage.getItem('pin-' + remotePin.id);
