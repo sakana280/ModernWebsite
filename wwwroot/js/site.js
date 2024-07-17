@@ -13,6 +13,18 @@ import { Workbox } from '../lib/workbox-window/build/workbox-window.prod.mjs';
 const wb = new Workbox('../service-worker.js');
 await wb.register(); // defers registration to after page load
 
+if (Notification.permission !== "granted") {
+    const btn = document.getElementById('subscribeToPushNotifications');
+    btn.style.display = 'block';
+    btn.addEventListener('click', async event => {
+        const status = await Notification.requestPermission();
+        if (status === 'granted') {
+            btn.style.display = 'none';
+            //todo subscribe
+        }
+    });
+}
+
 const map = L.map('map').setView([-34.928, 138.598], 8); // Adelaide
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
