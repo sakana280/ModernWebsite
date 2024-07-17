@@ -6,6 +6,13 @@
 // After a pin is deleted, show=false
 // Can remove a pin entry after show=false and sync=false
 
+// Use localForage as an improved localStorage that stores any object and prefers IndexedDB.
+import '../lib/localforage/dist/localforage.min.js';
+
+import { Workbox } from '../lib/workbox-window/build/workbox-window.prod.mjs';
+const wb = new Workbox('../service-worker.js');
+await wb.register(); // defers registration to after page load
+
 const map = L.map('map').setView([-34.928, 138.598], 8); // Adelaide
 
 L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -32,7 +39,7 @@ async function generateAndStoreNewClientId() {
 map.on('click', async function (e) {
     const id = crypto.randomUUID();
     const pin = { id: id, owner: clientid, latlng: e.latlng, show: true };
-    window.wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
+    wb.messageSW({ type: 'UPDATE_PIN', payload: pin });
     // Add the pin to the map when the service worker echoes back the new pin.
 });
 
@@ -51,14 +58,14 @@ function addPin(pin) {
             var marker = event.target;
             var position = marker.getLatLng();
             marker.pin.latlng = position;
-            window.wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
+            wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
             console.log('move', id, 'to', position);
         });
 
         marker.on('click', async function (event) { // clicked without dragging -> delete
             var marker = event.target;
             marker.pin.show = false;
-            window.wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
+            wb.messageSW({ type: 'UPDATE_PIN', payload: marker.pin });
             console.log('delete', id);
         });
     }
@@ -67,7 +74,7 @@ function addPin(pin) {
 }
 
 async function loadFromSW() {
-    const pins = await window.wb.messageSW({ type: 'GET_PINS' });
+    const pins = await wb.messageSW({ type: 'GET_PINS' });
     pins.map(addPin);
 }
 
